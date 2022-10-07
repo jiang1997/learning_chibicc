@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -82,6 +83,18 @@ static Token *new_token(TokenType type, char *start, char *end) {
     return tok;
 }
 
+static bool startwith(char *p, char *q) {
+    return strncmp(p, q, strlen(q)) == 0;
+}
+
+static int read_punct(char *p) {
+    if (startwith(p, "==") || startwith(p, "!=") ||
+        startwith(p, "<=") || startwith(p, ">="))
+        return 2;
+    
+    return ispunct(*p) ? 1: 0;
+}
+
 static Token *tokenize(void) {
     char *p = current_input;
     Token head = {};
@@ -101,9 +114,11 @@ static Token *tokenize(void) {
             continue;
         }
 
-        if(ispunct(*p)) {
-            cur = cur->next = new_token(TK_PUNCT, p, p + 1);
-            ++p;
+        // Punctuators
+        int punct_len = read_punct(p);
+        if (punct_len) {
+            cur = cur->next = new_token(TK_PUNCT, p, p + punct_len);
+            p += cur->len;
             continue;
         }
 
@@ -124,6 +139,10 @@ typedef enum {
     ND_MUL,
     ND_DIV,
     ND_NEG,
+    ND_EQ,  // ==
+    ND_NE,  // !=
+    ND_LT,  // <
+    ND_LE,  // <=
     ND_NUM,
 } NodeType;
 
@@ -163,17 +182,79 @@ static Node *new_unary(Node *lhs) {
 
 expr    = mul ("+" mul | "-" mul)*
 mul     = unary ("*" unary | "/" unary)*
-unary   = ("-")* unary | primary
+unary   = ("-" | "+")* unary | primary
 primary = num | "(" expr ")"
 
+
+expr       = equality
+equality   = relational ("==" relational | "!=" relational)*
+relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+add        = mul ("+" mul | "-" mul)*
+mul        = unary ("*" unary | "/" unary)*
+unary      = ("+" | "-")? primary
+primary    = num | "(" expr ")"
 */
 
 static Node *expr(Token **rest, Token *tok);
+static Node *equality(Token **rest, Token *tok);
+static Node *relational(Token **rest, Token *tok);
+static Node *add(Token **rest, Token *tok);
 static Node *mul(Token **rest, Token *tok);
 static Node *unary(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
 
 static Node *expr(Token **rest, Token *tok) {
+    return equality(rest, tok);
+}
+
+static Node *equality(Token **rest, Token *tok) {
+    Node *node = relational(&tok, tok);
+
+    for (;;) {
+        if (equal(tok, "==")) {
+            node = new_binary(ND_EQ, node, relational(&tok, tok->next));
+            continue;
+        }
+
+        if (equal(tok, "!=")) {
+            node = new_binary(ND_NE, relational(&tok, tok->next), node);
+            continue;
+        }
+
+        *rest = tok;
+        return node;
+    }
+}
+
+static Node *relational(Token **rest, Token *tok) {
+    Node *node = add(&tok, tok);
+    for (;;) {
+        if (equal(tok, "<")) {
+            node = new_binary(ND_LT, node, add(&tok, tok->next));
+            continue;
+        }
+
+        if (equal(tok, ">")) {
+            node = new_binary(ND_LT, add(&tok, tok->next), node);
+            continue;
+        }
+
+        if (equal(tok, "<=")) {
+            node = new_binary(ND_LE, node, add(&tok, tok->next));
+            continue;
+        }
+
+        if (equal(tok, ">=")) {
+            node = new_binary(ND_LE, add(&tok, tok->next), node);
+            continue;
+        }
+        *rest = tok;
+        return node;
+    }
+
+}
+
+static Node *add(Token **rest, Token *tok) {
     Node *node = mul(&tok, tok);
     for (;;) {
         if (equal(tok, "+")) {
@@ -312,6 +393,23 @@ static void gen_expr(Node *node) {
         printf("  cqo\n");
         printf("  idiv %rdi, %rax\n");
         return;
+    case ND_EQ:
+    case ND_LE:
+    case ND_NE:
+    case ND_LT:
+        printf("  cmp %%rdi, %%rax\n");
+
+        if (node->type == ND_EQ)
+            printf("  sete %%al\n");
+        else if (node->type == ND_NE)
+            printf("  setne %%al\n");
+        else if (node->type == ND_LT)
+            printf("  setl %%al\n");
+        else if (node->type == ND_LE)
+            printf("  setle %%al\n");
+
+        printf("  movzb %%al, %%rax\n");
+        return;
     }
 
     error("invalid expression");
@@ -337,7 +435,8 @@ int main(int argc, char **argv) {
     printf("main:\n");
 
     gen_expr(e);
-
     printf("  ret\n");
+    
+    assert(depth == 0);
     return 0;
 }

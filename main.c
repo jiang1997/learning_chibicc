@@ -101,7 +101,7 @@ static Token *tokenize(void) {
             continue;
         }
 
-        if(*p == '-' || *p == '+') {
+        if(ispunct(*p)) {
             cur = cur->next = new_token(TK_PUNCT, p, p + 1);
             ++p;
             continue;
@@ -113,6 +113,164 @@ static Token *tokenize(void) {
     return head.next;
 }
 
+
+//
+// Parser
+//
+
+typedef enum {
+    ND_ADD,
+    ND_SUB,
+    ND_MUL,
+    ND_DIV,
+    ND_NUM,
+} NodeType;
+
+// AST node type
+typedef struct Node Node;
+struct Node {
+    NodeType type;
+    Node *lhs;
+    Node *rhs;
+    int val;
+};
+
+static Node *new_node(NodeType type) {
+    Node *node = calloc(1, sizeof(Node));
+    node->type = type;
+    return node;
+}
+
+static Node *new_binary(NodeType type, Node *lhs, Node *rhs) {
+    Node *node = new_node(type);
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return node;
+}
+
+static Node *new_num(int val) {
+    Node *node = new_node(ND_NUM);
+    node->val = val;
+}
+
+/*
+
+expr    = mul ("+" mul | "-" mul)*
+mul     = primary ("*" primary | "/" primary)*
+primary = num | "(" expr ")"
+
+*/
+
+static Node *expr(Token **rest, Token *tok);
+static Node *mul(Token **rest, Token *tok);
+static Node *primary(Token **rest, Token *tok);
+
+static Node *expr(Token **rest, Token *tok) {
+    Node *node = mul(&tok, tok);
+    for (;;) {
+        if (equal(tok, "+")) {
+            node = new_binary(ND_ADD, node, mul(&tok, tok->next));
+            continue;
+        }
+
+        if (equal(tok, "-")) {
+            node = new_binary(ND_SUB, node, mul(&tok, tok->next));
+            continue;
+        }
+
+        *rest = tok;
+        return node;
+    }
+}
+
+static Node *mul(Token **rest, Token *tok) {
+    Node *node = primary(&tok, tok);
+    for (;;) {
+        if (equal(tok, "*")) {
+            node = new_binary(ND_MUL, node, primary(&tok, tok->next));
+            continue;
+        }
+
+        if (equal(tok, "/")) {
+            node = new_binary(ND_DIV, node, primary(&tok, tok->next));
+            continue;
+        }
+
+        *rest = tok;
+        return node;
+    }
+}
+
+static Node *primary(Token **rest, Token *tok) {
+    Node *node = NULL;
+    
+    if (tok->type == TK_NUM) {
+        node = new_num(get_number(tok));
+        *rest = tok->next;
+        return node;
+    }
+
+    if (equal(tok, "(")) {
+        node = expr(&tok, tok->next);
+        *rest = skip(tok, ")");
+        return node;
+    }
+
+    error_tok(tok, "expected an expression");
+}
+
+//
+// Code generator
+//
+
+static int depth;
+
+static void push(void) {
+    printf("  push %%rax\n");
+    depth++;
+}
+
+static void pop(char *arg) {
+    printf("  pop %s\n", arg);
+    depth--;
+}
+
+static void gen_expr(Node *node) {
+    if (node->type == ND_NUM) {
+        printf("  mov $%d, %rax\n", node->val);
+        return;
+    }
+
+    gen_expr(node->rhs);
+    push();
+    gen_expr(node->lhs);
+    pop("%rdi");
+
+    switch (node->type)
+    {
+    case ND_ADD:
+        printf("  add %rdi, %rax\n");
+        return;
+    case ND_SUB:
+        printf("  sub %rdi, %rax\n");
+        return;
+    case ND_MUL:
+        printf("  imul %rdi, %rax\n");
+        return;
+    case ND_DIV:
+        printf("  cqo\n");
+        printf("  idiv %rdi, %rax\n");
+        return;
+    }
+
+    error("invalid expression");
+}
+
+
+
+
+
+
 int main(int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr, "%s: invalid number of arguments\n", argv[0]);
@@ -121,25 +279,13 @@ int main(int argc, char **argv) {
 
     current_input = argv[1];
     Token *tok = tokenize();
+    Node *e = expr(&tok, tok);
 
     printf("  .globl main\n");
     printf("main:\n");
 
-    printf("  mov $%ld, %%rax\n", get_number(tok));
-    tok = tok->next;
-
-    while(tok->type != TK_EOF) {
-        if (equal(tok, "+")) {
-            printf("  add $%ld, %%rax\n", get_number(tok->next));
-            tok = tok->next->next;
-            continue;
-        }
-
-        tok = skip(tok, "-");
-        printf("  sub $%ld, %%rax\n", get_number(tok));
-        tok = tok->next;
-
-    }
+    
+    gen_expr(e);
 
     printf("  ret\n");
     return 0;

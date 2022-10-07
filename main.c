@@ -123,6 +123,7 @@ typedef enum {
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_NEG,
     ND_NUM,
 } NodeType;
 
@@ -153,16 +154,23 @@ static Node *new_num(int val) {
     node->val = val;
 }
 
+static Node *new_unary(Node *lhs) {
+    Node *node = new_node(ND_NEG);
+    node->lhs = lhs;
+}
+
 /*
 
 expr    = mul ("+" mul | "-" mul)*
-mul     = primary ("*" primary | "/" primary)*
+mul     = unary ("*" unary | "/" unary)*
+unary   = ("-")* unary | primary
 primary = num | "(" expr ")"
 
 */
 
 static Node *expr(Token **rest, Token *tok);
 static Node *mul(Token **rest, Token *tok);
+static Node *unary(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
 
 static Node *expr(Token **rest, Token *tok) {
@@ -184,15 +192,15 @@ static Node *expr(Token **rest, Token *tok) {
 }
 
 static Node *mul(Token **rest, Token *tok) {
-    Node *node = primary(&tok, tok);
+    Node *node = unary(&tok, tok);
     for (;;) {
         if (equal(tok, "*")) {
-            node = new_binary(ND_MUL, node, primary(&tok, tok->next));
+            node = new_binary(ND_MUL, node, unary(&tok, tok->next));
             continue;
         }
 
         if (equal(tok, "/")) {
-            node = new_binary(ND_DIV, node, primary(&tok, tok->next));
+            node = new_binary(ND_DIV, node, unary(&tok, tok->next));
             continue;
         }
 
@@ -200,6 +208,43 @@ static Node *mul(Token **rest, Token *tok) {
         return node;
     }
 }
+
+
+static Node *unary(Token **rest, Token *tok) {
+    if (equal(tok, "+")) {
+        return unary(rest, tok->next);
+    }
+
+    if (equal(tok, "-")) {
+        return new_unary(unary(rest, tok->next));
+    }
+
+    return primary(rest, tok);
+}
+
+
+// static Node *unary(Token **rest, Token *tok) {
+//     Node *head = new_unary(NULL);
+//     Node *node = head;
+//     for (;;) {
+//         if (equal(tok, "-")) {
+//             node = node->lhs = new_unary(NULL);
+//             tok = tok->next;
+//             continue;
+//         }
+
+//         if (equal(tok, "+")) {
+//             tok = tok->next;
+//             continue;
+//         }
+
+//         break;        
+//     }
+    
+//     node->lhs = primary(&tok, tok);
+//     *rest = tok;
+//     return head->lhs;
+// }
 
 static Node *primary(Token **rest, Token *tok) {
     Node *node = NULL;
@@ -236,10 +281,16 @@ static void pop(char *arg) {
 }
 
 static void gen_expr(Node *node) {
-    if (node->type == ND_NUM) {
-        printf("  mov $%d, %rax\n", node->val);
-        return;
+    switch (node->type) {
+        case ND_NUM:
+            printf("  mov $%d, %rax\n", node->val);
+            return;
+        case ND_NEG:
+            gen_expr(node->lhs);
+            printf("  neg %rax\n");
+            return;
     }
+
 
     gen_expr(node->rhs);
     push();
@@ -279,12 +330,12 @@ int main(int argc, char **argv) {
 
     current_input = argv[1];
     Token *tok = tokenize();
+
     Node *e = expr(&tok, tok);
 
     printf("  .globl main\n");
     printf("main:\n");
 
-    
     gen_expr(e);
 
     printf("  ret\n");

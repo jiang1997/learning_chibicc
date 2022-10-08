@@ -26,6 +26,10 @@ static void gen_expr(Node *node) {
             gen_expr(node->lhs);
             printf("  neg %rax\n");
             return;
+        case ND_EXPR_STMT:
+            for (; node != NULL; node = node->next)
+                gen_expr(node->lhs);
+            return;
     }
 
 

@@ -3,6 +3,9 @@
 //
 // Parser
 //
+
+static Node *stmt(Token **rest, Token *tok);
+static Node *expr_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 static Node *equality(Token **rest, Token *tok);
 static Node *relational(Token **rest, Token *tok);
@@ -36,19 +39,15 @@ static Node *new_num(int val) {
     node->val = val;
 }
 
-static Node *new_unary(Node *lhs) {
-    Node *node = new_node(ND_NEG);
-    node->lhs = lhs;
+static Node *new_unary(NodeType type, Node *expr) {
+    Node *node = new_node(type);
+    node->lhs = expr;
+    return node;
 }
 
 /*
-
-expr    = mul ("+" mul | "-" mul)*
-mul     = unary ("*" unary | "/" unary)*
-unary   = ("-" | "+")* unary | primary
-primary = num | "(" expr ")"
-
-
+stmt       = expr-stmt
+expr-stmt  = expt ";"
 expr       = equality
 equality   = relational ("==" relational | "!=" relational)*
 relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -60,9 +59,21 @@ primary    = num | "(" expr ")"
 
 
 Node *parse(Token *tok) {
-    Node *node = expr(&tok, tok);
-    if (tok->type != TK_EOF)
-        error_tok(tok, "extra token");
+    Node head = {};
+    Node *cur = &head;
+    while (tok->type != TK_EOF) {
+        cur = cur->next = stmt(&tok, tok);
+    }
+    return head.next;
+}
+
+static Node *stmt(Token **rest, Token *tok) {
+    return expr_stmt(rest, tok);
+}
+
+static Node *expr_stmt(Token **rest, Token *tok) {
+    Node *node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
+    *rest = skip(tok, ";");
     return node;
 }
 
@@ -160,7 +171,7 @@ static Node *unary(Token **rest, Token *tok) {
     }
 
     if (equal(tok, "-")) {
-        return new_unary(unary(rest, tok->next));
+        return new_unary(ND_NEG, unary(rest, tok->next));
     }
 
     return primary(rest, tok);

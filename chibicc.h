@@ -26,10 +26,11 @@ typedef enum {
     ND_MUL,
     ND_DIV,
     ND_NEG,
-    ND_EQ,  // ==
-    ND_NE,  // !=
-    ND_LT,  // <
-    ND_LE,  // <=
+    ND_EQ,          // ==
+    ND_NE,          // !=
+    ND_LT,          // <
+    ND_LE,          // <=
+    ND_EXPR_STMT,   // Expression statement
     ND_NUM,
 } NodeType;
 
@@ -37,6 +38,7 @@ typedef enum {
 typedef struct Node Node;
 struct Node {
     NodeType type;
+    Node *next;
     Node *lhs;
     Node *rhs;
     int val;

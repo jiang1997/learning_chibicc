@@ -26,6 +26,9 @@ static void gen_expr(Node *node) {
             gen_expr(node->lhs);
             printf("  neg %rax\n");
             return;
+        case ND_VAR:
+            printf("  movq -%d(%%rbp), %%rax\n", (node->name - 'a' + 1) * 8);
+            return;
     }
 
 
@@ -66,6 +69,10 @@ static void gen_expr(Node *node) {
 
         printf("  movzb %%al, %%rax\n");
         return;
+    case ND_ASSIGN:
+        printf("  movq %%rdi, -%d(%%rbp)\n", (node->lhs->name - 'a' + 1) * 8);
+        printf("  movq -%d(%%rbp), %%rax\n", (node->lhs->name - 'a' + 1) * 8);
+        return;
     }
 
     error("invalid expression");
@@ -84,10 +91,15 @@ void codegen(Node *node) {
     printf("  .globl main\n");
     printf("main:\n");
 
+    printf("  pushq %%rbp\n");
+    printf("  movq %%rsp, %%rbp\n");
+    printf("  subq $208, %%rsp\n");
+
     for (Node *cur = node; cur; cur = cur->next) {
         gen_stmt(cur);
         assert(depth == 0);    
     }
-        
+    
+    printf("  leave\n");
     printf("  ret\n");
 }

@@ -93,6 +93,12 @@ Token *tokenize(char *p) {
             continue;
         }
 
+        if (isalpha(*p)) {
+            cur = cur->next = new_token(TK_IDENT, p, p + 1);
+            p += cur->len;
+            continue;
+        }
+        
         error_at(p, "invalid token");
     }
     cur = cur->next = new_token(TK_EOF, p, p);

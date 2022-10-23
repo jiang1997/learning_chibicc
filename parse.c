@@ -7,6 +7,7 @@
 static Node *stmt(Token **rest, Token *tok);
 static Node *expr_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
+static Node *assign(Token **rest, Token *tok);
 static Node *equality(Token **rest, Token *tok);
 static Node *relational(Token **rest, Token *tok);
 static Node *add(Token **rest, Token *tok);
@@ -45,16 +46,23 @@ static Node *new_unary(NodeType type, Node *expr) {
     return node;
 }
 
+static Node *new_var(char name) {
+    Node *node = new_node(ND_VAR);
+    node->name = name;
+    return node;
+}
+
 /*
-stmt       = expr-stmt
-expr-stmt  = expt ";"
-expr       = equality
-equality   = relational ("==" relational | "!=" relational)*
-relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-add        = mul ("+" mul | "-" mul)*
-mul        = unary ("*" unary | "/" unary)*
-unary      = ("+" | "-")? primary
-primary    = num | "(" expr ")"
+stmt        = expr-stmt
+expr-stmt   = expt ";"
+expr        = assign
+assign      = equality ("=" assign)?
+equality    = relational ("==" relational | "!=" relational)*
+relational  = add ("<" add | "<=" add | ">" add | ">=" add)*
+add         = mul ("+" mul | "-" mul)*
+mul         = unary ("*" unary | "/" unary)*
+unary       = ("+" | "-")? primary
+primary     = "(" expr ")" | ident | num
 */
 
 
@@ -78,7 +86,16 @@ static Node *expr_stmt(Token **rest, Token *tok) {
 }
 
 static Node *expr(Token **rest, Token *tok) {
-    return equality(rest, tok);
+    return assign(rest, tok);
+}
+
+static Node *assign(Token **rest, Token *tok) {
+    Node *node = equality(&tok, tok);
+    if (equal(tok, "=")) {
+        node = new_binary(ND_ASSIGN, node, assign(&tok, tok->next));
+    }
+    *rest = tok;
+    return node;
 }
 
 static Node *equality(Token **rest, Token *tok) {
@@ -206,6 +223,12 @@ static Node *primary(Token **rest, Token *tok) {
     
     if (tok->type == TK_NUM) {
         node = new_num(get_number(tok));
+        *rest = tok->next;
+        return node;
+    }
+
+    if (tok->type == TK_IDENT) {
+        node = new_var(*(tok->loc));
         *rest = tok->next;
         return node;
     }

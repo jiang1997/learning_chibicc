@@ -9,6 +9,7 @@ typedef enum {
     TK_PUNCT,   // Punctuators
     TK_NUM,
     TK_EOF,
+    TK_IDENT,   // Identifiers
 } TokenType;
 
 typedef struct Token Token;
@@ -30,8 +31,10 @@ typedef enum {
     ND_NE,          // !=
     ND_LT,          // <
     ND_LE,          // <=
+    ND_ASSIGN,
     ND_EXPR_STMT,   // Expression statement
     ND_NUM,
+    ND_VAR,
 } NodeType;
 
 // AST node type
@@ -41,6 +44,7 @@ struct Node {
     Node *next;
     Node *lhs;
     Node *rhs;
+    char name;
     int val;
 };
 

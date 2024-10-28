@@ -94,7 +94,12 @@ Token *tokenize(char *p) {
         }
 
         if (isalpha(*p)) {
-            cur = cur->next = new_token(TK_IDENT, p, p + 1);
+            char *q = p + 1;
+            while (*q && (isalpha(*q) || isdigit(*q))) {
+                q += 1;
+            }
+
+            cur = cur->next = new_token(TK_IDENT, p, q);
             p += cur->len;
             continue;
         }

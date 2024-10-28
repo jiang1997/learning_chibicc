@@ -54,7 +54,7 @@ static Node *new_var(char name) {
 
 /*
 stmt        = expr-stmt
-expr-stmt   = expt ";"
+expr-stmt   = expr ";"
 expr        = assign
 assign      = equality ("=" assign)?
 equality    = relational ("==" relational | "!=" relational)*

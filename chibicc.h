@@ -5,6 +5,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct Node Node;
+
+// local variable
+typedef struct Obj Obj;
+struct Obj {
+    Obj *next;
+    char *name; // Variable name
+    int offset; // Offset from rbp
+    int length;
+};
+
+// Function
+typedef struct Function Function;
+struct Function {
+    Node *body;
+    Obj *locals;
+    int stack_size;
+};
+
+
 typedef enum {
     TK_PUNCT,   // Punctuators
     TK_NUM,
@@ -38,7 +58,7 @@ typedef enum {
 } NodeType;
 
 // AST node type
-typedef struct Node Node;
+
 struct Node {
     NodeType type;
     Node *next;
@@ -46,6 +66,7 @@ struct Node {
     Node *rhs;
     char name;
     int val;
+    Obj *var;
 };
 
 void error_at(char *loc, char *fmt, ...);
@@ -55,5 +76,6 @@ Token *skip(Token *tok, char *s);
 bool equal(Token *tok, char *s);
 
 Token *tokenize(char *input);
-Node *parse(Token *tok);
-void codegen(Node *node);
+Function *parse(Token *tok);
+void codegen(Function *prog);
+

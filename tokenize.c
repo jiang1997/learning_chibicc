@@ -33,11 +33,12 @@ void error(char *fmt, ...) {
     exit(1);
 }
 
-
+// Consumes the current token if it matches `op`.
 bool equal(Token *tok, char *s) {
     return memcmp(tok->loc, s, tok->len) == 0 && s[tok->len] == '\0';
 }
 
+// Ensure that the current token is `op`.
 Token *skip(Token *tok, char *s) {
     if (!equal(tok, s)) {
         error_tok(tok, "expected '%s'", s);
@@ -45,7 +46,7 @@ Token *skip(Token *tok, char *s) {
     return tok->next;
 }
 
-
+// Create a new token.
 static Token *new_token(TokenType type, char *start, char *end) {
     Token *tok = calloc(1, sizeof(Token));
     tok->type = type;
@@ -58,12 +59,21 @@ static bool startwith(char *p, char *q) {
     return strncmp(p, q, strlen(q)) == 0;
 }
 
+// Read a punctuator token from p and returns its length.
 static int read_punct(char *p) {
     if (startwith(p, "==") || startwith(p, "!=") ||
         startwith(p, "<=") || startwith(p, ">="))
         return 2;
     
     return ispunct(*p) ? 1: 0;
+}
+
+static bool is_valid_ident_intial(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+static bool is_valid_ident_subsequent(char c) {
+    return is_valid_ident_intial(c) || (c >= '0' && c <= '9');
 }
 
 Token *tokenize(char *p) {
@@ -93,14 +103,15 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        if (isalpha(*p)) {
-            char *q = p + 1;
-            while (*q && (isalpha(*q) || isdigit(*q))) {
-                q += 1;
+        // Identifier
+        if (is_valid_ident_intial(*p)) {
+            char *start = p;
+
+            while (is_valid_ident_subsequent(*p)) {
+                p++;
             }
 
-            cur = cur->next = new_token(TK_IDENT, p, q);
-            p += cur->len;
+            cur = cur->next = new_token(TK_IDENT, start, p);
             continue;
         }
         

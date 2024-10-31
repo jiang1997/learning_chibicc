@@ -72,6 +72,8 @@ static Node *new_var(Obj *var) {
 }
 
 /*
+body        = ("{" stmts "}" | stmts)?
+stmts       = (stmt)?
 stmt        = expr-stmt | return-stmt
 return-stmt = "return" expr ";"
 expr-stmt   = expr ";"
@@ -88,8 +90,29 @@ primary     = "(" expr ")" | ident | num
 Function *parse(Token *tok) {
     Node head = {};
     Node *cur = &head;
+
+    int num_not_paired_curly_brace = 0;
     while (tok->type != TK_EOF) {
+        if (equal(tok, "{")) {
+            num_not_paired_curly_brace += 1;
+            tok = tok->next;
+            continue;
+        }
+
+        if (equal(tok, "}")) {
+            num_not_paired_curly_brace -= 1;
+            tok = tok->next;
+            if (num_not_paired_curly_brace < 0) {
+                error_tok(tok, "'}' not properly paired");
+            }
+            continue;
+        }
+
         cur = cur->next = stmt(&tok, tok);
+    }
+
+    if (num_not_paired_curly_brace != 0) {
+        error_tok(tok, "'}' not properly paired");
     }
 
     Function *prog = calloc(1, sizeof(Function));

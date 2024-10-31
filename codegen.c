@@ -92,17 +92,17 @@ static void gen_expr(Node *node) {
 }
 
 static void gen_stmt(Node *node) {
-    if (node->type == ND_EXPR_STMT) {
+    switch (node->type) {
+    case ND_EXPR_STMT:
         gen_expr(node->lhs);
-        return;
-    } else if (node->type == ND_RETURN_STMT) {
+        break;
+    case ND_RETURN_STMT:
         gen_expr(node->lhs);
-        printf("  leave\n");
-        printf("  ret\n");
-        return ;
+        printf("  jmp .L.return\n");
+        break;
+    default:
+        error("invalid statement");
     }
-
-    error("invalid statement");
 }
 
 static void calc_local_variable_offset(Function *prog) {
@@ -136,4 +136,9 @@ void codegen(Function *prog) {
         gen_stmt(cur);
         assert(depth == 0);
     }
+
+    printf(".L.return:\n");
+    printf("  movq %%rbp, %%rsp\n");
+    printf("  popq %%rbp\n");
+    printf("  ret\n");
 }

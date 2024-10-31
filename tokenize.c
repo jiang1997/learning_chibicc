@@ -76,6 +76,17 @@ static bool is_valid_ident_subsequent(char c) {
     return is_valid_ident_intial(c) || (c >= '0' && c <= '9');
 }
 
+static void remark_ident_as_keyword(Token *tok) {
+    while(tok->type != TK_EOF) {
+        if (equal(tok, "return")) {
+            tok->type = TK_KEYWORD;
+        }
+
+        tok = tok->next;
+    }
+}
+
+// Tokenize a given string and returns new tokens.
 Token *tokenize(char *p) {
     current_input = p;
     Token head = {};
@@ -103,7 +114,7 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        // Identifier
+        // Identifier / Keyword
         if (is_valid_ident_intial(*p)) {
             char *start = p;
 
@@ -117,6 +128,9 @@ Token *tokenize(char *p) {
         
         error_at(p, "invalid token");
     }
+
     cur = cur->next = new_token(TK_EOF, p, p);
+    remark_ident_as_keyword(head.next);
+
     return head.next;
 }

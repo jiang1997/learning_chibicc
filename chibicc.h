@@ -29,6 +29,7 @@ typedef enum {
     TK_NUM,
     TK_EOF,
     TK_IDENT, // Identifiers
+    TK_KEYWORD, // Keywords
 } TokenType;
 
 typedef struct Token Token;

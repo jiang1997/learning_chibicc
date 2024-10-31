@@ -24,12 +24,11 @@ struct Function {
     int stack_size;
 };
 
-
 typedef enum {
-    TK_PUNCT,   // Punctuators
+    TK_PUNCT, // Punctuators
     TK_NUM,
     TK_EOF,
-    TK_IDENT,   // Identifiers
+    TK_IDENT, // Identifiers
 } TokenType;
 
 typedef struct Token Token;
@@ -47,12 +46,13 @@ typedef enum {
     ND_MUL,
     ND_DIV,
     ND_NEG,
-    ND_EQ,          // ==
-    ND_NE,          // !=
-    ND_LT,          // <
-    ND_LE,          // <=
+    ND_EQ, // ==
+    ND_NE, // !=
+    ND_LT, // <
+    ND_LE, // <=
     ND_ASSIGN,
-    ND_EXPR_STMT,   // Expression statement
+    ND_RETURN_STMT, // return statement
+    ND_EXPR_STMT, // Expression statement
     ND_NUM,
     ND_VAR,
 } NodeType;
@@ -78,4 +78,3 @@ bool equal(Token *tok, char *s);
 Token *tokenize(char *input);
 Function *parse(Token *tok);
 void codegen(Function *prog);
-

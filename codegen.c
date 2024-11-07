@@ -100,6 +100,13 @@ static void gen_stmt(Node *node) {
         gen_expr(node->lhs);
         printf("  jmp .L.return\n");
         break;
+    case ND_BLOCK:
+        node = node->body;
+        while(node != NULL) {
+            gen_stmt(node);
+            node = node->next;
+        }
+        break;
     default:
         error("invalid statement");
     }
@@ -132,10 +139,8 @@ void codegen(Function *prog) {
     // reserve stack space according to local variables
     printf("  subq $%d, %%rsp\n", prog->stack_size);
 
-    for (Node *cur = prog->body; cur; cur = cur->next) {
-        gen_stmt(cur);
-        assert(depth == 0);
-    }
+    gen_stmt(prog->body);
+    assert(depth == 0);
 
     printf(".L.return:\n");
     printf("  movq %%rbp, %%rsp\n");

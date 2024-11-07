@@ -56,6 +56,7 @@ typedef enum {
     ND_EXPR_STMT, // Expression statement
     ND_NUM,
     ND_VAR,
+    ND_BLOCK,
 } NodeType;
 
 // AST node type
@@ -65,6 +66,7 @@ struct Node {
     Node *next;
     Node *lhs;
     Node *rhs;
+    Node *body;
     char name;
     int val;
     Obj *var;

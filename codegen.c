@@ -1,11 +1,14 @@
 #include "chibicc.h"
 #include <assert.h>
+#include <stdio.h>
 
 //
 // Code generator
 //
 
 int depth = 0;
+
+int if_label_num = 0;
 
 static void push(void) {
     printf("  push %%rax\n");
@@ -102,10 +105,29 @@ static void gen_stmt(Node *node) {
         break;
     case ND_BLOCK:
         node = node->body;
-        while(node != NULL) {
+        while (node != NULL) {
             gen_stmt(node);
             node = node->next;
         }
+        break;
+    case ND_IF:
+        // node = node->next;
+        gen_expr(node->lhs);
+        printf("  cmpl $0, %%eax\n");
+        int cur = if_label_num;
+        if_label_num += 2;
+        printf("  je .L%d\n", cur);
+        gen_stmt(node->body);
+        printf("  jmp .L%d\n", cur + 1);
+        printf(".L%d:\n",cur);
+
+        // else branch
+        if (node->rhs != NULL) {
+            gen_stmt(node->rhs);
+        }
+
+        printf(".L%d:\n", cur + 1);
+
         break;
     default:
         error("invalid statement");

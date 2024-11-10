@@ -57,6 +57,7 @@ typedef enum {
     ND_NUM,
     ND_VAR,
     ND_BLOCK,
+    ND_IF,
 } NodeType;
 
 // AST node type

@@ -10,6 +10,7 @@ static Node *stmt(Token **rest, Token *tok);
 static Node *return_stmt(Token **rest, Token *tok);
 static Node *expr_stmt(Token **rest, Token *tok);
 static Node *compound_stmt(Token **rest, Token *tok);
+static Node *if_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 static Node *assign(Token **rest, Token *tok);
 static Node *equality(Token **rest, Token *tok);
@@ -74,19 +75,23 @@ static Node *new_var(Obj *var) {
 
 /*
 compound_stmt = "{" stmt* "}"
-stmt        = "return" expr ";
-            | compound_stmt
-            | expr-stmt
-null_stmt   = ";"
-expr-stmt   = expr? ";"
-expr        = assign
-assign      = equality ("=" assign)?
-equality    = relational ("==" relational | "!=" relational)*
-relational  = add ("<" add | "<=" add | ">" add | ">=" add)*
-add         = mul ("+" mul | "-" mul)*
-mul         = unary ("*" unary | "/" unary)*
-unary       = ("+" | "-")? primary
-primary     = "(" expr ")" | ident | num
+stmt            = "return" expr ";
+                | compound-stmt
+                | expr-stmt
+                | if-stmt
+if-stmt         = if-stmt-base ("else" (compound_stmt | stmt})?
+if-stmt-base    = "if" "(" expr ")" compound_stmt
+                | if-stmt-base ("else" if-stmt-base)?
+null-stmt       = ";"
+expr-stmt       = expr? ";"
+expr            = assign
+assign          = equality ("=" assign)?
+equality        = relational ("==" relational | "!=" relational)*
+relational      = add ("<" add | "<=" add | ">" add | ">=" add)*
+add             = mul ("+" mul | "-" mul)*
+mul             = unary ("*" unary | "/" unary)*
+unary           = ("+" | "-")? primary
+primary         = "(" expr ")" | ident | num
 */
 
 Function *parse(Token *tok) {
@@ -105,9 +110,43 @@ static Node *stmt(Token **rest, Token *tok) {
         return return_stmt(rest, tok->next); 
     } else if(equal(tok, "{")) {
         return compound_stmt(rest, tok); 
+    } else if(equal(tok, "if")) {
+        return if_stmt(rest, tok);
     } else {
         return expr_stmt(rest, tok); 
     }
+}
+
+static Node *if_stmt(Token **rest, Token *tok) {
+    tok = skip(tok, "if");
+
+    tok = skip(tok, "(");
+
+    Node *node = new_node(ND_IF);
+    // condition
+    node->lhs = expr(&tok, tok);
+
+    tok = skip(tok, ")");
+
+    node->body = stmt(&tok, tok);
+
+    if (equal(tok, "else")) {
+        tok = tok->next;
+
+        // differentiate two cases below by lhs
+        if (equal(tok, "if")) {
+            // case1:
+            node->rhs = if_stmt(&tok, tok);
+        } else {
+            // case2:
+            node->rhs = compound_stmt(&tok, tok);
+        }
+    } 
+    
+    *rest = tok;
+
+    return node;
+
 }
 
 static Node *compound_stmt(Token **rest, Token *tok) {
@@ -115,6 +154,7 @@ static Node *compound_stmt(Token **rest, Token *tok) {
 
     Node *node = new_node(ND_BLOCK);
     Node **pre = &(node->body);
+
 
     while (tok->type != TK_EOF && !equal(tok, "}")) {
         Node *cur = stmt(&tok, tok);

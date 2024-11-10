@@ -75,9 +75,10 @@ static Node *new_var(Obj *var) {
 /*
 compound_stmt = "{" stmt* "}"
 stmt        = "return" expr ";
-            | expr-stmt
             | compound_stmt
-expr-stmt   = expr ";"
+            | expr-stmt
+null_stmt   = ";"
+expr-stmt   = expr? ";"
 expr        = assign
 assign      = equality ("=" assign)?
 equality    = relational ("==" relational | "!=" relational)*
@@ -99,7 +100,7 @@ Function *parse(Token *tok) {
 }
 
 
-static Node *stmt(Token **rest, Token *tok) { 
+static Node *stmt(Token **rest, Token *tok) {
     if (equal(tok, "return")) {
         return return_stmt(rest, tok->next); 
     } else if(equal(tok, "{")) {
@@ -134,6 +135,11 @@ static Node *return_stmt(Token **rest, Token *tok) {
 }
 
 static Node *expr_stmt(Token **rest, Token *tok) {
+    if (equal(tok, ";")) {
+        *rest = tok->next;
+        return new_node(ND_BLOCK);
+    }
+
     Node *node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
     *rest = skip(tok, ";");
     return node;

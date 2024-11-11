@@ -150,10 +150,9 @@ static void gen_stmt(Node *node) {
 
         if (node->for_cond != NULL) {
             gen_expr(node->for_cond);
+            printf("  cmpl $0, %%eax\n");
+            printf("  je .L.for.end.%d\n", cur);
         }
-        
-        printf("  cmpl $0, %%eax\n");
-        printf("  je .L.for.end.%d\n", cur);
 
         gen_stmt(node->body);
 

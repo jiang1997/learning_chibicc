@@ -8,7 +8,10 @@
 
 int depth = 0;
 
-int if_label_num = 0;
+static int next_if_label_num() {
+    static int if_label_num = 0;
+    return if_label_num++;
+}
 
 static void push(void) {
     printf("  push %%rax\n");
@@ -112,21 +115,20 @@ static void gen_stmt(Node *node) {
         break;
     case ND_IF:
         // node = node->next;
-        gen_expr(node->lhs);
+        gen_expr(node->cond);
         printf("  cmpl $0, %%eax\n");
-        int cur = if_label_num;
-        if_label_num += 2;
-        printf("  je .L%d\n", cur);
-        gen_stmt(node->body);
-        printf("  jmp .L%d\n", cur + 1);
-        printf(".L%d:\n",cur);
+        int cur = next_if_label_num();
+        printf("  je .L.if.else.%d\n", cur);
+        gen_stmt(node->then);
+        printf("  jmp .L.if.end.%d\n", cur);
+        printf(".L.if.else.%d:\n",cur);
 
         // else branch
-        if (node->rhs != NULL) {
-            gen_stmt(node->rhs);
+        if (node->els != NULL) {
+            gen_stmt(node->els);
         }
 
-        printf(".L%d:\n", cur + 1);
+        printf(".L.if.end.%d:\n", cur);
 
         break;
     default:

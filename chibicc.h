@@ -65,12 +65,20 @@ typedef enum {
 struct Node {
     NodeType type;
     Node *next;
+
     Node *lhs;
     Node *rhs;
+
+    int val; // ND_NUM
+    Obj *var; // ND_VAR
+
+    // Block
     Node *body;
-    char name;
-    int val;
-    Obj *var;
+
+    // "if" statement
+    Node *cond;
+    Node *then;
+    Node *els;
 };
 
 void error_at(char *loc, char *fmt, ...);

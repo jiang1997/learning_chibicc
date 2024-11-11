@@ -79,9 +79,7 @@ stmt            = "return" expr ";
                 | compound-stmt
                 | expr-stmt
                 | if-stmt
-if-stmt         = if-stmt-base ("else" (compound_stmt | stmt})?
-if-stmt-base    = "if" "(" expr ")" compound_stmt
-                | if-stmt-base ("else" if-stmt-base)?
+if-stmt         = if-stmt ("else" stmt)?
 null-stmt       = ";"
 expr-stmt       = expr? ";"
 expr            = assign
@@ -124,23 +122,17 @@ static Node *if_stmt(Token **rest, Token *tok) {
 
     Node *node = new_node(ND_IF);
     // condition
-    node->lhs = expr(&tok, tok);
+    node->cond = expr(&tok, tok);
 
     tok = skip(tok, ")");
 
-    node->body = stmt(&tok, tok);
+    node->then = stmt(&tok, tok);
 
     if (equal(tok, "else")) {
         tok = tok->next;
 
         // differentiate two cases below by lhs
-        if (equal(tok, "if")) {
-            // case1:
-            node->rhs = if_stmt(&tok, tok);
-        } else {
-            // case2:
-            node->rhs = compound_stmt(&tok, tok);
-        }
+        node->els = stmt(&tok, tok);
     } 
     
     *rest = tok;

@@ -76,9 +76,22 @@ static bool is_valid_ident_subsequent(char c) {
     return is_valid_ident_intial(c) || (c >= '0' && c <= '9');
 }
 
+static bool is_keyword(Token *tok) {
+    static char *key_words[] = {"return", "if", "else"};
+
+    for (int i = 0; i < sizeof(key_words) / sizeof(*key_words); ++i) {
+        if (equal(tok, key_words[i]) ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static void remark_ident_as_keyword(Token *tok) {
+
     while(tok->type != TK_EOF) {
-        if (equal(tok, "return")) {
+        if (is_keyword(tok)) {
             tok->type = TK_KEYWORD;
         }
 

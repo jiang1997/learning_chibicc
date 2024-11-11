@@ -8,9 +8,14 @@
 
 int depth = 0;
 
-static int next_if_label_num() {
-    static int if_label_num = 0;
-    return if_label_num++;
+static int next_if_stmt_label_num() {
+    static int num = 0;
+    return num++;
+}
+
+static int next_for_stmt_label_num() {
+    static int num = 0;
+    return num++;
 }
 
 static void push(void) {
@@ -26,7 +31,7 @@ static void pop(char *arg) {
 // Round up `n` to the nearest multiple of `align`. For instance,
 // align_to(5, 8) returns 8 and align_to(11, 8) returns 16.
 static int align_to(int n, int align) {
-    return (n + align - 1) * align / align;
+    return (n + align - 1) / align * align;
 }
 
 static void gen_addr(Node *node) {
@@ -114,10 +119,11 @@ static void gen_stmt(Node *node) {
         }
         break;
     case ND_IF:
+    {
         // node = node->next;
         gen_expr(node->cond);
         printf("  cmpl $0, %%eax\n");
-        int cur = next_if_label_num();
+        int cur = next_if_stmt_label_num();
         printf("  je .L.if.else.%d\n", cur);
         gen_stmt(node->then);
         printf("  jmp .L.if.end.%d\n", cur);
@@ -130,7 +136,36 @@ static void gen_stmt(Node *node) {
 
         printf(".L.if.end.%d:\n", cur);
 
+    }
         break;
+    case ND_FOR:
+    {
+        int cur = next_for_stmt_label_num();
+
+        if (node->for_init != NULL) {
+            gen_expr(node->for_init);
+        }
+
+        printf(".L.for.start.%d:\n", cur);
+
+        if (node->for_cond != NULL) {
+            gen_expr(node->for_cond);
+        }
+        
+        printf("  cmpl $0, %%eax\n");
+        printf("  je .L.for.end.%d\n", cur);
+
+        gen_stmt(node->body);
+
+        if (node->for_expr != NULL) {
+            gen_expr(node->for_expr);
+        }
+        
+        printf("  jmp .L.for.start.%d\n", cur);
+        printf(".L.for.end.%d:\n", cur);
+    }
+        break;
+
     default:
         error("invalid statement");
     }

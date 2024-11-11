@@ -58,6 +58,7 @@ typedef enum {
     ND_VAR,
     ND_BLOCK,
     ND_IF,
+    ND_FOR,
 } NodeType;
 
 // AST node type
@@ -79,6 +80,11 @@ struct Node {
     Node *cond;
     Node *then;
     Node *els;
+
+    // "for" statement
+    Node *for_init;
+    Node *for_cond;
+    Node *for_expr;
 };
 
 void error_at(char *loc, char *fmt, ...);

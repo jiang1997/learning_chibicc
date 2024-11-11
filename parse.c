@@ -19,6 +19,7 @@ static Node *add(Token **rest, Token *tok);
 static Node *mul(Token **rest, Token *tok);
 static Node *unary(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
+static Node *for_stmt (Token **rest, Token *tok);
 
 static Obj *find_local_var(Token *tok) {
     if (tok->type != TK_IDENT) {
@@ -74,11 +75,13 @@ static Node *new_var(Obj *var) {
 }
 
 /*
-compound_stmt = "{" stmt* "}"
-stmt            = "return" expr ";
+stmt            = "return" expr";
                 | compound-stmt
                 | expr-stmt
                 | if-stmt
+                | for-stmt
+for-stmt        = "for" "(" (expr)?  ";" (expr)? ";" (expr)? ")" stmt
+compound_stmt = "{" stmt* "}"
 if-stmt         = if-stmt ("else" stmt)?
 null-stmt       = ";"
 expr-stmt       = expr? ";"
@@ -110,9 +113,39 @@ static Node *stmt(Token **rest, Token *tok) {
         return compound_stmt(rest, tok); 
     } else if(equal(tok, "if")) {
         return if_stmt(rest, tok);
+    } else if(equal(tok, "for")) {
+        return for_stmt(rest, tok->next);
     } else {
         return expr_stmt(rest, tok); 
     }
+}
+
+
+static Node *for_stmt (Token **rest, Token *tok) {
+    Node *node = new_node(ND_FOR);
+
+    tok = skip(tok, "(");
+    if (!equal(tok, ";")) {
+        node->for_init = expr(&tok, tok);
+    }
+    tok = skip(tok, ";");
+
+
+    if (!equal(tok, ";")) {
+        node->for_cond = expr(&tok, tok);
+    }
+    tok = skip(tok, ";");
+
+    if (!equal(tok, ")")) {
+        node->for_expr = expr(&tok, tok);
+    }
+    tok = skip(tok, ")");
+
+    node->body = stmt(&tok, tok);
+
+    *rest = tok;
+
+    return node;
 }
 
 static Node *if_stmt(Token **rest, Token *tok) {

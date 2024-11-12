@@ -11,6 +11,7 @@ static Node *return_stmt(Token **rest, Token *tok);
 static Node *expr_stmt(Token **rest, Token *tok);
 static Node *compound_stmt(Token **rest, Token *tok);
 static Node *if_stmt(Token **rest, Token *tok);
+static Node *while_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 static Node *assign(Token **rest, Token *tok);
 static Node *equality(Token **rest, Token *tok);
@@ -80,6 +81,8 @@ stmt            = "return" expr";
                 | expr-stmt
                 | if-stmt
                 | for-stmt
+                | while-stmt
+while-stmt      = "while" "(" expr ")" stmt
 for-stmt        = "for" "(" (expr)?  ";" (expr)? ";" (expr)? ")" stmt
 compound_stmt = "{" stmt* "}"
 if-stmt         = if-stmt ("else" stmt)?
@@ -115,13 +118,28 @@ static Node *stmt(Token **rest, Token *tok) {
         return if_stmt(rest, tok);
     } else if(equal(tok, "for")) {
         return for_stmt(rest, tok->next);
+    } else if (equal(tok, "while")) {
+        return while_stmt(rest, tok->next);
     } else {
         return expr_stmt(rest, tok); 
     }
 }
 
+static Node *while_stmt(Token **rest, Token *tok) {
+    Node *node = new_node(ND_WHILE);
 
-static Node *for_stmt (Token **rest, Token *tok) {
+    tok = skip(tok, "(");
+    node->cond = expr(&tok, tok);
+    tok = skip(tok, ")");
+    node->then = stmt(&tok, tok);
+
+    *rest = tok;
+
+    return node;
+}
+
+
+static Node *for_stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_FOR);
 
     tok = skip(tok, "(");

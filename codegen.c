@@ -118,8 +118,7 @@ static void gen_stmt(Node *node) {
             node = node->next;
         }
         break;
-    case ND_IF:
-    {
+    case ND_IF: {
         // node = node->next;
         gen_expr(node->cond);
         printf("  cmpl $0, %%eax\n");
@@ -127,7 +126,7 @@ static void gen_stmt(Node *node) {
         printf("  je .L.if.else.%d\n", cur);
         gen_stmt(node->then);
         printf("  jmp .L.if.end.%d\n", cur);
-        printf(".L.if.else.%d:\n",cur);
+        printf(".L.if.else.%d:\n", cur);
 
         // else branch
         if (node->els != NULL) {
@@ -136,10 +135,8 @@ static void gen_stmt(Node *node) {
 
         printf(".L.if.end.%d:\n", cur);
 
-    }
-        break;
-    case ND_FOR:
-    {
+    } break;
+    case ND_FOR: {
         int cur = next_for_stmt_label_num();
 
         if (node->for_init != NULL) {
@@ -159,12 +156,25 @@ static void gen_stmt(Node *node) {
         if (node->for_expr != NULL) {
             gen_expr(node->for_expr);
         }
-        
+
         printf("  jmp .L.for.start.%d\n", cur);
         printf(".L.for.end.%d:\n", cur);
-    }
-        break;
+    } break;
+    case ND_WHILE: {
+        int cur = next_for_stmt_label_num();
 
+        printf(".L.while.start.%d:\n", cur);
+
+        gen_expr(node->cond);
+        printf("  cmpl $0, %%eax\n");
+        printf("  je .L.while.end.%d\n", cur);
+
+        gen_stmt(node->then);
+
+        printf("  jmp .L.while.start.%d\n", cur);
+        printf(".L.while.end.%d:\n", cur);        
+
+    } break;
     default:
         error("invalid statement");
     }

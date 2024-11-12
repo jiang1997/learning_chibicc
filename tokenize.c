@@ -77,7 +77,7 @@ static bool is_valid_ident_subsequent(char c) {
 }
 
 static bool is_keyword(Token *tok) {
-    static char *key_words[] = {"return", "if", "else", "for"};
+    static char *key_words[] = {"return", "if", "else", "for", "while"};
 
     for (int i = 0; i < sizeof(key_words) / sizeof(*key_words); ++i) {
         if (equal(tok, key_words[i]) ) {

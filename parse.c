@@ -126,12 +126,12 @@ static Node *stmt(Token **rest, Token *tok) {
 }
 
 static Node *while_stmt(Token **rest, Token *tok) {
-    Node *node = new_node(ND_WHILE);
+    Node *node = new_node(ND_FOR);
 
     tok = skip(tok, "(");
-    node->cond = expr(&tok, tok);
+    node->for_cond = expr(&tok, tok);
     tok = skip(tok, ")");
-    node->then = stmt(&tok, tok);
+    node->body = stmt(&tok, tok);
 
     *rest = tok;
 

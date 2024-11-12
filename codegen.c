@@ -160,21 +160,6 @@ static void gen_stmt(Node *node) {
         printf("  jmp .L.for.start.%d\n", cur);
         printf(".L.for.end.%d:\n", cur);
     } break;
-    case ND_WHILE: {
-        int cur = next_for_stmt_label_num();
-
-        printf(".L.while.start.%d:\n", cur);
-
-        gen_expr(node->cond);
-        printf("  cmpl $0, %%eax\n");
-        printf("  je .L.while.end.%d\n", cur);
-
-        gen_stmt(node->then);
-
-        printf("  jmp .L.while.start.%d\n", cur);
-        printf(".L.while.end.%d:\n", cur);        
-
-    } break;
     default:
         error("invalid statement");
     }

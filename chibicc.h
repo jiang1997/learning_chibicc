@@ -58,8 +58,7 @@ typedef enum {
     ND_VAR,
     ND_BLOCK,
     ND_IF,
-    ND_FOR,
-    ND_WHILE,
+    ND_FOR, // for "for" and "while"
 } NodeType;
 
 // AST node type

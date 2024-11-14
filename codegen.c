@@ -38,7 +38,10 @@ static void gen_addr(Node *node) {
     if (node->type == ND_VAR) {
         int offset = node->var->offset;
         printf("  lea %d(%%rbp), %%rax\n", offset);
+        return;
     }
+
+    error_tok( node->tok, "not an lvalue");
 }
 
 static void gen_expr(Node *node) {
